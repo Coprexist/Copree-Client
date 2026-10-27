@@ -38,12 +38,16 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
-
       - name: 安装 Android SDK 组件
+        # 不用 android-actions/setup-android：它内部会 sdkmanager install "tools"，
+        # 而该包已从 Google 的仓库下架，整步会以 "Failed to find package 'tools'" 失败。
+        # ubuntu-latest 自带 ANDROID_HOME 与 cmdline-tools，这里只补需要的组件。
         run: |
-          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "ndk;26.1.10909125" > /dev/null
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;26.1.10909125" > /dev/null
           echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> "$GITHUB_ENV"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
 
       - uses: dtolnay/rust-toolchain@stable
         with:
