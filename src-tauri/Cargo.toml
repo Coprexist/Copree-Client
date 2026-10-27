@@ -16,10 +16,14 @@ name = "aischat-client"
 path = "src/main.rs"
 
 [dependencies]
-tauri = { version = "2", features = ["devtools"] }
+# devtools 只在 debug 构建里由 Tauri 自动启用；写进依赖会让 release 包也能被 adb 远程调试
+tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 log = "0.4"
+# 实例探测放在 Rust 侧：起始页与实例不同源，浏览器里发起的跨域请求会被实例的 CORS
+# 策略挡掉（后端默认不注册 CORS 中间件），只有原生请求才能拿到真实状态码。
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls-webpki-roots"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

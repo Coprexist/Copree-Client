@@ -1,8 +1,5 @@
-# Rust build output
-target/
-
-# Tauri generated project files
-gen/
+# Rust build output（不带斜杠：本地把 target 软链到大盘时也要忽略）
+target
 
 # Generated platform icons (regenerate with `yarn icon`)
 icons/

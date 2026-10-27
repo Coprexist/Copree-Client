@@ -4,6 +4,7 @@
   "author": "Frank Steven",
   "description": "AIsChat Client app build with tauri.",
   "scripts": {
+    "tauri": "tauri",
     "deps": "yarn",
     "icon": "htb icon all",
     "icon:desktop": "htb icon desktop",

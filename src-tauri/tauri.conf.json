@@ -6,14 +6,13 @@
   "build": {
     "beforeBuildCommand": "",
     "beforeDevCommand": "",
-    "devUrl": "https://aischat.datongai.top/",
     "frontendDist": "../frontend"
   },
   "app": {
     "withGlobalTauri": true,
     "windows": [],
     "security": {
-      "csp": "default-src 'self' https://aischat.datongai.top; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://aischat.datongai.top; style-src 'self' 'unsafe-inline' https://aischat.datongai.top; img-src 'self' data: blob: https://aischat.datongai.top; connect-src 'self' https://aischat.datongai.top https://tauri.localhost http://tauri.localhost; font-src 'self' https://aischat.datongai.top",
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost",
       "capabilities": [
         {
           "identifier": "main-default",

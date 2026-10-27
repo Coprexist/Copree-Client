@@ -1,123 +1,409 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>AIsChat Client</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: white;
-    }
-    .container {
-      text-align: center;
-      padding: 40px;
-      max-width: 100%;
-      width: 100%;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    .logo-img { width: 80px; height: 80px; margin-bottom: 20px; border-radius: 16px; }
-    .title { font-size: 28px; font-weight: 600; margin-bottom: 16px; }
-    .subtitle { font-size: 16px; opacity: 0.9; margin-bottom: 32px; }
-    .spinner {
-      width: 50px; height: 50px;
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-size: 14px; opacity: 0.8; }
-    .error-icon-img { width: 64px; height: 64px; margin-bottom: 20px; border-radius: 14px; }
-    .error-message { font-size: 16px; margin-bottom: 8px; }
-    .error-detail { font-size: 14px; opacity: 0.8; margin-bottom: 32px; }
-    .retry-btn {
-      padding: 12px 32px; background: white; color: #667eea;
-      border: none; border-radius: 25px; font-size: 16px; font-weight: 600;
-      cursor: pointer; display: flex; align-items: center; gap: 8px;
-    }
-    .retry-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .retry-btn.retrying { pointer-events: none; opacity: 0.7; }
-    .btn-spinner {
-      width: 20px; height: 20px;
-      border: 3px solid rgba(102, 126, 234, 0.3);
-      border-top-color: #667eea;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    .hidden { display: none !important; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d0a17">
+<title>AIsChat</title>
+<style>
+  :root {
+    --bg: #0d0a17;
+    --surface: #171233;
+    --surface-2: #1e1840;
+    --border: #2c2456;
+    --text: #f4f2fb;
+    --text-dim: #9d96b8;
+    --purple: #7f5cf6;
+    --purple-soft: #9f83fb;
+    --gold: #eeab3e;
+    --danger: #f2637c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-tap-highlight-color: transparent;
+    overflow-y: auto;
+    padding: calc(env(safe-area-inset-top, 0px) + 28px) 20px calc(env(safe-area-inset-bottom, 0px) + 28px);
+  }
+  .app { max-width: 480px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .brand-logo { width: 44px; height: 44px; flex: none; }
+  .brand-title { font-size: 20px; font-weight: 650; letter-spacing: .2px; }
+  .brand-sub { font-size: 13px; color: var(--text-dim); }
+  h2 { font-size: 13px; font-weight: 600; color: var(--text-dim); letter-spacing: .06em; margin: 0 0 10px 4px; }
+  .list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .card:active { background: var(--surface-2); border-color: var(--purple); }
+  .card-main { min-width: 0; flex: 1; }
+  .card-name { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card-url { font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+  .card-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim); }
+  .tag.on { color: var(--purple-soft); border-color: rgba(159, 131, 251, .45); }
+  .icon-btn {
+    background: none; border: none; color: var(--text-dim); padding: 6px;
+    border-radius: 8px; cursor: pointer; line-height: 0; flex: none;
+  }
+  .icon-btn:active { color: var(--danger); background: rgba(242, 99, 124, .1); }
+  .card-confirm { display: flex; flex-direction: column; gap: 10px; cursor: default; }
+  .card-confirm .row { display: flex; gap: 8px; }
+  .btn {
+    border: none; border-radius: 10px; padding: 11px 16px; font-size: 15px;
+    font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity .15s ease;
+  }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn-primary { background: var(--purple); color: #fff; }
+  .btn-primary:active { background: #6d4ae6; }
+  .btn-ghost { background: var(--surface-2); color: var(--text-dim); }
+  .btn-danger { background: rgba(242, 99, 124, .14); color: var(--danger); }
+  .form { display: flex; flex-direction: column; gap: 10px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 12px; color: var(--text-dim); padding-left: 2px; }
+  input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 15px;
+    font-family: inherit; outline: none; -webkit-appearance: none;
+  }
+  input::placeholder { color: #5f5880; }
+  input:focus { border-color: var(--purple); }
+  .hint { font-size: 12px; color: var(--text-dim); padding-left: 2px; }
+  .status { font-size: 13px; min-height: 20px; padding-left: 2px; }
+  .status.err { color: var(--danger); }
+  .status.ok { color: var(--purple-soft); }
+  .toggle-add {
+    background: none; border: none; color: var(--purple-soft); font-size: 14px;
+    font-family: inherit; cursor: pointer; padding: 12px 2px; text-align: left;
+  }
+  .footer { margin-top: auto; padding-top: 24px; font-size: 12px; color: #5f5880; line-height: 1.7; }
+  .hidden { display: none !important; }
+  .connecting-overlay {
+    position: fixed; inset: 0; background: rgba(13, 10, 23, .92);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; z-index: 10;
+  }
+  .connecting-overlay .spinner-lg {
+    width: 32px; height: 32px; border: 3px solid rgba(255,255,255,.15);
+    border-top-color: var(--purple); border-radius: 50%; animation: spin .9s linear infinite;
+  }
+  .connecting-overlay .overlay-text { font-size: 14px; color: var(--text-dim); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
 </head>
 <body>
-  <div class="container" id="landingContainer">
-    <div id="loadingState">
-      <img class="logo-img" src="icon.png" alt="AIsChat">
-      <div class="title">AIsChat Client</div>
-      <div class="subtitle">让 AI 拥有自己的生命节奏</div>
-      <div class="spinner"></div>
-      <div class="loading-text">正在连接服务器...</div>
-    </div>
-    <div id="errorState" class="hidden">
-      <img class="error-icon-img" src="icon.png" alt="AIsChat">
-      <div class="title">连接失败</div>
-      <div class="error-message" id="errorMessage">网络连接异常</div>
-      <div class="error-detail" id="errorDetail">请检查网络设置后重试</div>
-      <button class="retry-btn" id="retryBtn"><span>&#x1F504;</span><span>重试连接</span></button>
+<div class="app">
+  <div class="brand">
+    <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="l" x1="0" y1=".5" x2="1" y2=".5"><stop offset="0" stop-color="#9f83fb"/><stop offset="1" stop-color="#7f5cf6"/></linearGradient>
+        <linearGradient id="r" x1="0" y1=".5" x2="1" y2=".5"><stop offset="0" stop-color="#f7c956"/><stop offset="1" stop-color="#eeab3e"/></linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="8" fill="#0d0a17"/>
+      <circle cx="11" cy="16" r="5" fill="none" stroke="url(#l)" stroke-width="2.5"/>
+      <circle cx="21" cy="16" r="5" fill="none" stroke="url(#r)" stroke-width="2.5"/>
+    </svg>
+    <div>
+      <div class="brand-title">AIsChat</div>
+      <div class="brand-sub">连接你的实例</div>
     </div>
   </div>
-  <script>
-    (function() {
-      var SERVER_URL = 'https://aischat.datongai.top/';
-      var MAX_RETRIES = 3;
-      var retries = 0;
-      var timeoutId = null;
-      var loadingState = document.getElementById('loadingState');
-      var errorState = document.getElementById('errorState');
-      var errorMessage = document.getElementById('errorMessage');
-      var errorDetail = document.getElementById('errorDetail');
-      var retryBtn = document.getElementById('retryBtn');
-      function showLoading() { loadingState.classList.remove('hidden'); errorState.classList.add('hidden'); }
-      function showError(m, d) { loadingState.classList.add('hidden'); errorState.classList.remove('hidden'); errorMessage.textContent = m; errorDetail.textContent = d; }
-      function startApp() {
-        window.location.href = SERVER_URL;
-      }
-      function tryConnect() {
-        showLoading(); retries++;
-        timeoutId = setTimeout(function() {
-          if (retries >= MAX_RETRIES) { showError('连接持续失败', '请检查网络设置或稍后再试'); }
-          else { showError('连接超时', '第 ' + retries + '/' + MAX_RETRIES + ' 次'); retryBtn.click(); }
-        }, 10000);
-        fetch(SERVER_URL, { method: 'HEAD', signal: AbortSignal.timeout(8000) })
-          .then(function(r) { clearTimeout(timeoutId); if (r.ok) { startApp(); } else { throw new Error('HTTP ' + r.status); } })
-          .catch(function(e) { clearTimeout(timeoutId); if (retries >= MAX_RETRIES) { showError('连接失败', '错误: ' + (e.message || '')); } else { setTimeout(tryConnect, 2000); } });
-      }
-      retryBtn.addEventListener('click', function() {
-        retryBtn.classList.add('retrying');
-        retryBtn.innerHTML = '<div class="btn-spinner"></div><span>连接中...</span>';
-        fetch(SERVER_URL, { method: 'HEAD', signal: AbortSignal.timeout(8000) })
-          .then(function(r) { if (r.ok) { startApp(); } else { throw new Error('HTTP ' + r.status); } })
-          .catch(function(e) {
-            retryBtn.classList.remove('retrying');
-            retryBtn.innerHTML = '<span>&#x1F504;</span><span>重试连接</span>';
-            retries++;
-            if (retries >= MAX_RETRIES) { showError('连接持续失败', '请检查网络设置或稍后再试'); }
-            else { errorMessage.textContent = '连接失败 (尝试 ' + retries + '/' + MAX_RETRIES + ')'; errorDetail.textContent = '错误: ' + (e.message || ''); }
+
+  <section id="saved" class="hidden">
+    <h2>已保存的实例</h2>
+    <div id="list" class="list"></div>
+    <button id="showAdd" class="btn btn-ghost" type="button" style="width:100%">连接新实例</button>
+  </section>
+
+  <section id="addForm">
+    <h2 id="addTitle">连接你的第一个实例</h2>
+    <form id="form" class="form" autocomplete="off">
+      <div class="field">
+        <label for="url">实例地址</label>
+        <input id="url" name="url" type="url" inputmode="url" autocapitalize="off" autocorrect="off"
+               spellcheck="false" placeholder="https://your-instance.example.com">
+      </div>
+      <div class="field">
+        <label for="name">名称（可选）</label>
+        <input id="name" name="name" type="text" maxlength="40" placeholder="例如：家里、公司、朋友的实例">
+      </div>
+      <button id="submit" class="btn btn-primary" type="submit">连接</button>
+      <div id="status" class="status" role="status"></div>
+      <div class="hint">支持 HTTPS 域名，也支持局域网地址，例如 http://192.168.1.10:5227</div>
+    </form>
+  </section>
+
+  <div class="footer">实例列表保存在本机，不会上传。连接后可在实例之间切换。</div>
+</div>
+
+<div id="overlay" class="connecting-overlay hidden">
+  <div class="spinner-lg"></div>
+  <div id="overlayText" class="overlay-text">正在连接…</div>
+</div>
+
+<script>
+(function () {
+  var STORE_KEY = 'aischat.instances.v1';
+  var LAST_KEY = 'aischat.lastInstanceId';
+  var PROBE_TIMEOUT = 9000;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {
+    saved: $('saved'), list: $('list'), addForm: $('addForm'), addTitle: $('addTitle'),
+    form: $('form'), url: $('url'), name: $('name'), submit: $('submit'),
+    status: $('status'), showAdd: $('showAdd'), overlay: $('overlay'), overlayText: $('overlayText')
+  };
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.filter(function (i) { return i && i.url; }) : [];
+    } catch (e) { return []; }
+  }
+  function save(list) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function lastId() { try { return localStorage.getItem(LAST_KEY); } catch (e) { return null; } }
+  function setLast(id) { try { localStorage.setItem(LAST_KEY, id); } catch (e) {} }
+
+  // 补协议、去尾部斜杠、去 query/hash，保留路径前缀（实例可能挂在子路径）
+  function normalize(input) {
+    var s = String(input || '').trim();
+    if (!s) return null;
+    if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+    var u;
+    try { u = new URL(s); } catch (e) { return null; }
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    if (!u.hostname) return null;
+    return u.origin + u.pathname.replace(/\/+$/, '');
+  }
+  function hostOf(url) {
+    try { return new URL(url).host; } catch (e) { return String(url); }
+  }
+
+  // 探测实例：Tauri 里走 Rust 侧请求（不受 CORS 限制），浏览器里退回 fetch
+  function probe(base) {
+    var tauri = window.__TAURI__;
+    if (tauri && tauri.core && typeof tauri.core.invoke === 'function') {
+      return tauri.core.invoke('probe_instance', { url: base });
+    }
+    return new Promise(function (resolve) {
+      var ctrl = new AbortController();
+      var started = Date.now();
+      var timer = setTimeout(function () { ctrl.abort(); }, PROBE_TIMEOUT);
+      fetch(base + '/health', { signal: ctrl.signal, cache: 'no-store' })
+        .then(function (r) {
+          return r.json().catch(function () { return null; }).then(function (body) {
+            resolve({
+              ok: r.ok, status: r.status,
+              version: body && body.version ? String(body.version) : null,
+              distribution: body && body.distribution ? String(body.distribution) : null,
+              degraded: false, latencyMs: Date.now() - started, error: null
+            });
           });
+        })
+        .catch(function (e) {
+          resolve({ ok: false, status: 0, version: null, distribution: null, degraded: false,
+                    latencyMs: Date.now() - started, error: String((e && e.message) || e) });
+        })
+        .then(function () { clearTimeout(timer); });
+    });
+  }
+
+  function describeFailure(base, res) {
+    var err = res.error || '';
+    if (/abort|timeout|timed out/i.test(err)) return '连接超时：' + hostOf(base) + ' 在 ' + (PROBE_TIMEOUT / 1000) + ' 秒内没有响应';
+    if (err) return '无法连接 ' + hostOf(base) + '：' + err;
+    if (res.status === 404) return hostOf(base) + ' 上没有 AIsChat（/health 返回 404）';
+    if (res.status >= 500) return hostOf(base) + ' 返回 ' + res.status + '，服务可能正在启动或数据库异常';
+    return '连接失败：HTTP ' + res.status;
+  }
+
+  function setStatus(text, kind) {
+    els.status.textContent = text || '';
+    els.status.className = 'status' + (kind ? ' ' + kind : '');
+  }
+  function setBusy(busy) {
+    els.submit.disabled = busy;
+    els.submit.textContent = busy ? '连接中…' : '连接';
+  }
+
+  function render() {
+    var list = load();
+    var has = list.length > 0;
+    els.saved.classList.toggle('hidden', !has);
+    els.list.innerHTML = '';
+    els.addForm.classList.toggle('hidden', has);
+    els.addTitle.textContent = has ? '连接实例' : '连接你的第一个实例';
+    if (!has) return;
+
+    var lid = lastId();
+    list.forEach(function (inst) {
+      var card = document.createElement('div');
+      card.className = 'card';
+
+      var main = document.createElement('div');
+      main.className = 'card-main';
+      var nameEl = document.createElement('div');
+      nameEl.className = 'card-name';
+      nameEl.textContent = inst.name || hostOf(inst.url);
+      var urlEl = document.createElement('div');
+      urlEl.className = 'card-url';
+      urlEl.textContent = inst.url;
+      main.appendChild(nameEl);
+      main.appendChild(urlEl);
+
+      var meta = document.createElement('div');
+      meta.className = 'card-meta';
+      if (inst.url === lid) {
+        var lastTag = document.createElement('span');
+        lastTag.className = 'tag on';
+        lastTag.textContent = '上次使用';
+        meta.appendChild(lastTag);
+      }
+      if (inst.version) {
+        var vTag = document.createElement('span');
+        vTag.className = 'tag';
+        vTag.textContent = 'v' + inst.version;
+        meta.appendChild(vTag);
+      }
+      if (meta.childNodes.length) main.appendChild(meta);
+
+      var del = document.createElement('button');
+      del.className = 'icon-btn';
+      del.type = 'button';
+      del.title = '删除这个实例';
+      del.setAttribute('aria-label', '删除这个实例');
+      del.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
+
+      card.appendChild(main);
+      card.appendChild(del);
+
+      card.addEventListener('click', function (ev) {
+        if (del.contains(ev.target)) return;
+        connect(inst);
       });
-      tryConnect();
-    })();
-  </script>
+      del.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        renderConfirm(inst);
+      });
+
+      els.list.appendChild(card);
+    });
+  }
+
+  function renderConfirm(inst) {
+    var idx = load().findIndex(function (i) { return i.url === inst.url; });
+    var card = els.list.children[idx];
+    if (!card) return;
+    card.classList.add('card-confirm');
+    card.innerHTML = '';
+
+    var q = document.createElement('div');
+    q.textContent = '删除「' + (inst.name || hostOf(inst.url)) + '」？';
+    q.style.fontSize = '14px';
+
+    var row = document.createElement('div');
+    row.className = 'row';
+    var yes = document.createElement('button');
+    yes.className = 'btn btn-danger';
+    yes.type = 'button';
+    yes.textContent = '删除';
+    var no = document.createElement('button');
+    no.className = 'btn btn-ghost';
+    no.type = 'button';
+    no.textContent = '取消';
+    yes.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      save(load().filter(function (i) { return i.url !== inst.url; }));
+      if (lastId() === inst.url) setLast('');
+      render();
+    });
+    no.addEventListener('click', function (ev) { ev.stopPropagation(); render(); });
+    row.appendChild(yes);
+    row.appendChild(no);
+    card.appendChild(q);
+    card.appendChild(row);
+  }
+
+  function revealForm(url, name) {
+    els.addForm.classList.remove('hidden');
+    if (url) els.url.value = url;
+    if (name) els.name.value = name;
+    els.submit.focus();
+  }
+
+  function showOverlay(text) { els.overlayText.textContent = text; els.overlay.classList.remove('hidden'); }
+  function hideOverlay() { els.overlay.classList.add('hidden'); }
+
+  // 用 assign 而不是 replace：实例页留在历史里，Android 返回键可以从实例退回启动页
+  function connect(inst) {
+    showOverlay('正在连接 ' + hostOf(inst.url) + '…');
+    probe(inst.url).then(function (res) {
+      hideOverlay();
+      if (!res || (!res.ok && !(res.status === 503 && res.version))) {
+        render();
+        revealForm(inst.url, inst.name);
+        setStatus(describeFailure(inst.url, res || {}), 'err');
+        return;
+      }
+      save(load().map(function (i) {
+        return i.url === inst.url ? { url: i.url, name: i.name || '', version: res.version || i.version || '' } : i;
+      }));
+      setLast(inst.url);
+      window.location.assign(inst.url);
+    });
+  }
+
+  els.form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var base = normalize(els.url.value);
+    if (!base) {
+      setStatus('请输入有效的实例地址，例如 https://example.com 或 http://192.168.1.10:5227', 'err');
+      els.url.focus();
+      return;
+    }
+    var name = els.name.value.trim();
+    setBusy(true);
+    setStatus('正在连接 ' + hostOf(base) + '…', '');
+    probe(base).then(function (res) {
+      if (!res || (!res.ok && !(res.status === 503 && res.version))) {
+        setBusy(false);
+        setStatus(describeFailure(base, res || {}), 'err');
+        return;
+      }
+      var list = load();
+      var next = list.filter(function (i) { return i.url !== base; });
+      next.push({ url: base, name: name, version: res.version || '' });
+      save(next);
+      setLast(base);
+      setBusy(false);
+      setStatus('已连接' + (res.version ? '，实例版本 v' + res.version : ''), 'ok');
+      window.location.assign(base);
+    });
+  });
+
+  els.showAdd.addEventListener('click', function () {
+    els.addForm.classList.remove('hidden');
+    els.url.focus();
+  });
+
+  render();
+})();
+</script>
 </body>
 </html>

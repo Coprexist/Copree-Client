@@ -1,0 +1,128 @@
+name: Android APK
+
+# 构建产物：可安装的 APK。推 v* 标签时附带发布到 GitHub Release。
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      # 正式签名用仓库 Secrets；未配置时退回一次性密钥，产物仍可安装（仅用于测试）
+      KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          # 仓库用 yarn.lock，npm 缓存会因为找不到 package-lock.json 直接失败
+          cache: yarn
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: 安装 Android SDK 组件
+        run: |
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "ndk;26.1.10909125" > /dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          # 只装手机在用的两个 ABI：x86_64/i686 仅模拟器需要，
+          # 装进去会让 CI 多编译两份用不上的原生库
+          targets: aarch64-linux-android,armv7-linux-androideabi
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: 同步版本号
+        # 版本号决定 APK 的 versionCode，覆盖安装时新包必须更大
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          node -e "const fs=require('fs');const p='src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.version=process.env.GITHUB_REF_NAME.replace(/^v/,'');fs.writeFileSync(p,JSON.stringify(c,null,2)+'\\n');console.log('version',c.version)"
+
+      - name: 安装前端依赖
+        run: yarn install --frozen-lockfile --ignore-scripts
+
+      - name: 生成平台图标
+        # src-tauri/icons 是生成物且被 .gitignore 忽略，CI 每次重新生成
+        run: npx tauri icon icons/icon.png
+
+      - name: 构建 APK
+        # 一个通用 APK 里放 arm64 + armv7：覆盖所有真机，又不含模拟器专用的 x86 库
+        run: npx tauri android build --apk --ci -t aarch64 armv7
+
+      - name: 签名
+        run: |
+          set -euo pipefail
+          APK_DIR=src-tauri/gen/android/app/build/outputs/apk
+          UNSIGNED=$(find "$APK_DIR" -name '*-unsigned.apk' | head -1)
+          if [ -z "$UNSIGNED" ]; then
+            echo "未找到未签名 APK，构建产物目录："
+            find "$APK_DIR" -name '*.apk' || true
+            exit 1
+          fi
+
+          if [ -n "${KEYSTORE_BASE64:-}" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > /tmp/release.jks
+            KS=/tmp/release.jks
+            STORE_PASS="$KEYSTORE_PASSWORD"
+            ALIAS="$KEY_ALIAS"
+            KEY_PASS="$KEY_PASSWORD"
+            CHANNEL=release
+          else
+            KS=/tmp/ci.jks
+            STORE_PASS=aischtci
+            ALIAS=aischtci
+            KEY_PASS=aischtci
+            keytool -genkeypair -keystore "$KS" -storepass "$STORE_PASS" -keypass "$KEY_PASS" \
+              -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AIsChat CI" > /dev/null
+            CHANNEL=ci
+          fi
+
+          VERSION="${GITHUB_REF_NAME#v}"
+          case "$GITHUB_REF" in refs/tags/*) ;; *) VERSION="$(node -p "require('./src-tauri/tauri.conf.json').version")" ;; esac
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+
+          mkdir -p dist
+          OUT="dist/aischat-$VERSION-android-$CHANNEL.apk"
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$KS" --ks-pass "pass:$STORE_PASS" \
+            --key-pass "pass:$KEY_PASS" --ks-key-alias "$ALIAS" \
+            --out "$OUT" "$UNSIGNED"
+          "$BUILD_TOOLS/apksigner" verify --print-certs "$OUT" | head -4
+          ls -lh dist
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: aischat-android-apk
+          path: dist/*.apk
+          if-no-files-found: error
+
+      - name: 发布 Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.apk
+          generate_release_notes: true
